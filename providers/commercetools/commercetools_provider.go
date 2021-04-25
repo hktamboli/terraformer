@@ -16,6 +16,7 @@ package commercetools
 
 import (
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/hashicorp/terraform/addrs"
 	"github.com/pkg/errors"
 )
 
@@ -50,6 +51,10 @@ func (p *CommercetoolsProvider) Init(args []string) error {
 
 func (p *CommercetoolsProvider) GetName() string {
 	return "commercetools"
+}
+
+func (p *CommercetoolsProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "labd", "commercetools")
 }
 
 func (p *CommercetoolsProvider) InitService(serviceName string, verbose bool) error {

@@ -17,8 +17,10 @@ package openstack
 import (
 	"os"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/hashicorp/terraform/addrs"
 	"github.com/pkg/errors"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
 type OpenStackProvider struct { //nolint
@@ -53,6 +55,10 @@ func (p *OpenStackProvider) Init(args []string) error {
 
 func (p *OpenStackProvider) GetName() string {
 	return "openstack"
+}
+
+func (p *OpenStackProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "terraform-provider-openstack", "openstack")
 }
 
 func (p *OpenStackProvider) InitService(serviceName string, verbose bool) error {

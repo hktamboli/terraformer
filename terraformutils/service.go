@@ -44,6 +44,7 @@ type Service struct {
 	Name         string
 	Resources    []Resource
 	ProviderName string
+	ProviderPath string
 	Args         map[string]interface{}
 	Filter       []ResourceFilter
 	Verbose      bool
@@ -55,6 +56,14 @@ func (s *Service) SetProviderName(providerName string) {
 
 func (s *Service) GetProviderName() string {
 	return s.ProviderName
+}
+
+func (s *Service) SetProviderPath(providerPath string) {
+	s.ProviderPath = providerPath
+}
+
+func (s *Service) GetProviderPath() string {
+	return s.ProviderPath
 }
 
 func (s *Service) SetVerbose(verbose bool) {
@@ -154,12 +163,12 @@ func (s *Service) PostConvertHook() error {
 func (s *Service) PopulateIgnoreKeys(providerWrapper *providerwrapper.ProviderWrapper) {
 	var resourcesTypes []string
 	for _, r := range s.Resources {
-		resourcesTypes = append(resourcesTypes, r.InstanceInfo.Type)
+		resourcesTypes = append(resourcesTypes, r.Address.Type)
 	}
 	keys := IgnoreKeys(resourcesTypes, providerWrapper)
 	for k, v := range keys {
 		for i := range s.Resources {
-			if s.Resources[i].InstanceInfo.Type == k {
+			if s.Resources[i].Address.Type == k {
 				s.Resources[i].IgnoreKeys = append(s.Resources[i].IgnoreKeys, v...)
 			}
 		}

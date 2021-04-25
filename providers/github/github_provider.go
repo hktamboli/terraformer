@@ -17,9 +17,11 @@ package github
 import (
 	"os"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/hashicorp/terraform/addrs"
 	"github.com/pkg/errors"
 	"github.com/zclconf/go-cty/cty"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
 type GithubProvider struct { //nolint
@@ -72,6 +74,10 @@ func (p *GithubProvider) Init(args []string) error {
 
 func (p *GithubProvider) GetName() string {
 	return "github"
+}
+
+func (p *GithubProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "integrations", "github")
 }
 
 func (p *GithubProvider) InitService(serviceName string, verbose bool) error {

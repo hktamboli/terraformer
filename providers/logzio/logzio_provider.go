@@ -18,9 +18,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/hashicorp/terraform/addrs"
 	"github.com/pkg/errors"
 	"github.com/zclconf/go-cty/cty"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
 type LogzioProvider struct { //nolint
@@ -59,6 +61,10 @@ func (p *LogzioProvider) Init(args []string) error {
 
 func (p *LogzioProvider) GetName() string {
 	return "logzio"
+}
+
+func (p *LogzioProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "logzio", "logzio")
 }
 
 func (p *LogzioProvider) InitService(serviceName string, verbose bool) error {

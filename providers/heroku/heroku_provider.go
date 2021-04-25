@@ -16,6 +16,7 @@ package heroku
 
 import (
 	"errors"
+	"github.com/hashicorp/terraform/addrs"
 	"os"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
@@ -43,6 +44,10 @@ func (p *HerokuProvider) Init(args []string) error {
 
 func (p *HerokuProvider) GetName() string {
 	return "heroku"
+}
+
+func (p *HerokuProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "heroku", "heroku")
 }
 
 func (p *HerokuProvider) GetProviderData(arg ...string) map[string]interface{} {

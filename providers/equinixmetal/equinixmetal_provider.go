@@ -18,6 +18,8 @@ import (
 	"errors"
 	"os"
 
+	"github.com/hashicorp/terraform/addrs"
+
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
@@ -43,6 +45,10 @@ func (p *EquinixMetalProvider) Init(args []string) error {
 
 func (p *EquinixMetalProvider) GetName() string {
 	return "metal"
+}
+
+func (p *EquinixMetalProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "equinix", "metal")
 }
 
 func (p *EquinixMetalProvider) GetProviderData(arg ...string) map[string]interface{} {

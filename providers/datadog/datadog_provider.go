@@ -23,8 +23,10 @@ import (
 
 	datadogV1 "github.com/DataDog/datadog-api-client-go/api/v1/datadog"
 	datadogV2 "github.com/DataDog/datadog-api-client-go/api/v2/datadog"
-	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/hashicorp/terraform/addrs"
 	"github.com/zclconf/go-cty/cty"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
 type DatadogProvider struct { //nolint
@@ -139,6 +141,10 @@ func (p *DatadogProvider) Init(args []string) error {
 // GetName return string of provider name for Datadog
 func (p *DatadogProvider) GetName() string {
 	return "datadog"
+}
+
+func (p *DatadogProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "DataDog", "datadog")
 }
 
 // GetConfig return map of provider config for Datadog

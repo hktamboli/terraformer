@@ -16,6 +16,7 @@ package yandex
 
 import (
 	"errors"
+	"github.com/hashicorp/terraform/addrs"
 	"os"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
@@ -48,6 +49,10 @@ func (p *YandexProvider) Init(args []string) error {
 
 func (p *YandexProvider) GetName() string {
 	return "yandex"
+}
+
+func (p *YandexProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "yandex-cloud", "yandex")
 }
 
 func (p *YandexProvider) GetProviderData(arg ...string) map[string]interface{} {

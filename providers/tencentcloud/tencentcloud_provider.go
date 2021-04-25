@@ -18,10 +18,12 @@ import (
 	"errors"
 	"os"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
-	"github.com/GoogleCloudPlatform/terraformer/terraformutils/providerwrapper"
+	"github.com/hashicorp/terraform/addrs"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils/providerwrapper"
 )
 
 type TencentCloudProvider struct { //nolint
@@ -51,6 +53,10 @@ func (p *TencentCloudProvider) getCredential() error {
 
 func (p *TencentCloudProvider) GetName() string {
 	return "tencentcloud"
+}
+
+func (p *TencentCloudProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "tencentcloudstack", "tencentcloud")
 }
 
 func (p *TencentCloudProvider) Init(args []string) error {

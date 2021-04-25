@@ -19,8 +19,10 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/hashicorp/terraform/addrs"
 	"github.com/zclconf/go-cty/cty"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
 type NewRelicProvider struct { //nolint
@@ -63,6 +65,10 @@ func (p *NewRelicProvider) Init(args []string) error {
 
 func (p *NewRelicProvider) GetName() string {
 	return "newrelic"
+}
+
+func (p *NewRelicProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "newrelic", "newrelic")
 }
 
 func (p *NewRelicProvider) GetConfig() cty.Value {

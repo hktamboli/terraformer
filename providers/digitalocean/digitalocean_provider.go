@@ -18,6 +18,8 @@ import (
 	"errors"
 	"os"
 
+	"github.com/hashicorp/terraform/addrs"
+
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
@@ -37,6 +39,10 @@ func (p *DigitalOceanProvider) Init(args []string) error {
 
 func (p *DigitalOceanProvider) GetName() string {
 	return "digitalocean"
+}
+
+func (p *DigitalOceanProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "digitalocean", "digitalocean")
 }
 
 func (p *DigitalOceanProvider) GetProviderData(arg ...string) map[string]interface{} {

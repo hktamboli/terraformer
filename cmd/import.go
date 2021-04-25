@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/hashicorp/terraform/providers"
 	"io/ioutil"
 	"log"
 	"os"
@@ -99,11 +100,11 @@ func Import(provider terraformutils.ProviderGenerator, options ImportOptions, ar
 		return err
 	}
 
-	providerMapping.ConvertTFStates(providerWrapper)
+	providerMapping.ReorganizeResources()
 	// change structs with additional data for each resource
 	providerMapping.CleanupProviders()
 
-	err = importFromPlan(providerMapping, options, args)
+	err = importFromPlan(providerMapping, providerWrapper.GetSchema().ResourceTypes, options, args)
 
 	return err
 }
@@ -170,7 +171,7 @@ func initAllServicesResources(providersMapping *terraformutils.ProvidersMapping,
 	return nil
 }
 
-func importFromPlan(providerMapping *terraformutils.ProvidersMapping, options ImportOptions, args []string) error {
+func importFromPlan(providerMapping *terraformutils.ProvidersMapping, resourceTypes map[string]providers.Schema, options ImportOptions, args []string) error {
 	plan := &ImportPlan{
 		Provider:         providerMapping.GetBaseProvider().GetName(),
 		Options:          options,
@@ -188,7 +189,7 @@ func importFromPlan(providerMapping *terraformutils.ProvidersMapping, options Im
 		return ExportPlanFile(plan, path, "plan.json")
 	}
 
-	return ImportFromPlan(providerMapping.GetBaseProvider(), plan)
+	return ImportFromPlan(providerMapping.GetBaseProvider(), resourceTypes, plan)
 }
 
 func initServiceResources(service string, provider terraformutils.ProviderGenerator,
@@ -213,14 +214,15 @@ func initServiceResources(service string, provider terraformutils.ProviderGenera
 	return nil
 }
 
-func ImportFromPlan(provider terraformutils.ProviderGenerator, plan *ImportPlan) error {
+func ImportFromPlan(provider terraformutils.ProviderGenerator, resourceTypes map[string]providers.Schema, plan *ImportPlan) error {
 	options := plan.Options
 	importedResource := plan.ImportedResource
 	isServicePath := strings.Contains(options.PathPattern, "{service}")
 
 	if options.Connect {
 		log.Println(provider.GetName() + " Connecting.... ")
-		importedResource = terraformutils.ConnectServices(importedResource, isServicePath, provider.GetResourceConnections())
+		// TODO: fix connecting resources
+		//importedResource = terraformutils.ConnectServices(importedResource, isServicePath, provider.GetResourceConnections())
 	}
 
 	if !isServicePath {
@@ -228,13 +230,13 @@ func ImportFromPlan(provider terraformutils.ProviderGenerator, plan *ImportPlan)
 		for _, resources := range importedResource {
 			compactedResources = append(compactedResources, resources...)
 		}
-		e := printService(provider, "", options, compactedResources, importedResource)
+		e := printService(provider, "", options, compactedResources, importedResource, resourceTypes)
 		if e != nil {
 			return e
 		}
 	} else {
 		for serviceName, resources := range importedResource {
-			e := printService(provider, serviceName, options, resources, importedResource)
+			e := printService(provider, serviceName, options, resources, importedResource, resourceTypes)
 			if e != nil {
 				return e
 			}
@@ -243,7 +245,9 @@ func ImportFromPlan(provider terraformutils.ProviderGenerator, plan *ImportPlan)
 	return nil
 }
 
-func printService(provider terraformutils.ProviderGenerator, serviceName string, options ImportOptions, resources []terraformutils.Resource, importedResource map[string][]terraformutils.Resource) error {
+func printService(provider terraformutils.ProviderGenerator, serviceName string, options ImportOptions,
+	resources []terraformutils.Resource, importedResource map[string][]terraformutils.Resource,
+	resourceTypes map[string]providers.Schema) error {
 	log.Println(provider.GetName() + " save " + serviceName)
 	// Print HCL files for Resources
 	path := Path(options.PathPattern, provider.GetName(), serviceName, options.PathOutput)
@@ -251,7 +255,7 @@ func printService(provider terraformutils.ProviderGenerator, serviceName string,
 	if err != nil {
 		return err
 	}
-	tfStateFile, err := terraformutils.PrintTfState(resources)
+	tfStateFile, err := terraformutils.PrintTfState(resources, provider.GetProviderSource(), resourceTypes)
 	if err != nil {
 		return err
 	}
@@ -265,7 +269,7 @@ func printService(provider terraformutils.ProviderGenerator, serviceName string,
 			return err
 		}
 		// create Bucket file
-		if bucketStateDataFile, err := terraformutils.Print(bucket.BucketGetTfData(path), map[string]struct{}{}, options.Output); err == nil {
+		if bucketStateDataFile, err := terraformutils.Print(bucket.BucketGetTfData(path), map[string]struct{}{}, options.Output, false); err == nil {
 			terraformoutput.PrintFile(path+"/bucket.tf", bucketStateDataFile)
 		}
 	} else {
@@ -312,7 +316,7 @@ func printService(provider terraformutils.ProviderGenerator, serviceName string,
 			}
 			// create variables file
 			if len(provider.GetResourceConnections()[serviceName]) > 0 && options.Connect && len(variables["data"]["terraform_remote_state"]) > 0 {
-				variablesFile, err := terraformutils.Print(variables, map[string]struct{}{"config": {}}, options.Output)
+				variablesFile, err := terraformutils.Print(variables, map[string]struct{}{"config": {}}, options.Output, false)
 				if err != nil {
 					return err
 				}
@@ -342,7 +346,7 @@ func printService(provider terraformutils.ProviderGenerator, serviceName string,
 			}
 			// create variables file
 			if options.Connect {
-				variablesFile, err := terraformutils.Print(variables, map[string]struct{}{"config": {}}, options.Output)
+				variablesFile, err := terraformutils.Print(variables, map[string]struct{}{"config": {}}, options.Output, false)
 				if err != nil {
 					return err
 				}

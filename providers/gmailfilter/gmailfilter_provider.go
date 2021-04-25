@@ -18,6 +18,8 @@ import (
 	"errors"
 	"os"
 
+	"github.com/hashicorp/terraform/addrs"
+
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
@@ -47,6 +49,10 @@ func (p *GmailfilterProvider) Init(args []string) error {
 
 func (p *GmailfilterProvider) GetName() string {
 	return "gmailfilter"
+}
+
+func (p *GmailfilterProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "yamamoto-febc", "terraform-provider-gmailfilter") // TODO find out proper registry
 }
 
 func (p *GmailfilterProvider) InitService(serviceName string, verbose bool) error {

@@ -17,6 +17,8 @@ package mikrotik
 import (
 	"errors"
 
+	"github.com/hashicorp/terraform/addrs"
+
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 	"github.com/ddelnano/terraform-provider-mikrotik/client"
 )
@@ -34,6 +36,10 @@ func (p *MikrotikProvider) Init(args []string) error {
 
 func (p *MikrotikProvider) GetName() string {
 	return "mikrotik"
+}
+
+func (p *MikrotikProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "ddelnano", "mikrotik")
 }
 
 func (p *MikrotikProvider) GetProviderData(arg ...string) map[string]interface{} {

@@ -18,8 +18,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/hashicorp/terraform/addrs"
 	"github.com/zclconf/go-cty/cty"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
 // AliCloudProvider Provider for alicloud
@@ -97,6 +99,10 @@ func (p *AliCloudProvider) Init(args []string) error {
 // GetName Gets name of provider
 func (p *AliCloudProvider) GetName() string {
 	return "alicloud"
+}
+
+func (p *AliCloudProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "aliyun", "alicloud")
 }
 
 // InitService Initializes the AliCloud service

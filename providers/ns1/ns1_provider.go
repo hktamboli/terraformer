@@ -18,6 +18,8 @@ import (
 	"errors"
 	"os"
 
+	"github.com/hashicorp/terraform/addrs"
+
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
@@ -37,6 +39,10 @@ func (p *Ns1Provider) Init(args []string) error {
 
 func (p *Ns1Provider) GetName() string {
 	return "ns1"
+}
+
+func (p *Ns1Provider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "ns1-terraform", "ns1")
 }
 
 func (p *Ns1Provider) GetProviderData(arg ...string) map[string]interface{} {

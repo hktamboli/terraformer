@@ -18,8 +18,10 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/hashicorp/terraform/addrs"
 	"github.com/zclconf/go-cty/cty"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
 type KeycloakProvider struct { //nolint
@@ -55,6 +57,10 @@ func (p *KeycloakProvider) Init(args []string) error {
 
 func (p *KeycloakProvider) GetName() string {
 	return "keycloak"
+}
+
+func (p *KeycloakProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "mrparkers", "keycloak")
 }
 
 func (p *KeycloakProvider) GetProviderData(arg ...string) map[string]interface{} {

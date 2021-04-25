@@ -31,6 +31,8 @@ import (
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils/providerwrapper"
 	"github.com/zclconf/go-cty/cty"
 
+	"github.com/hashicorp/terraform/addrs"
+
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -58,6 +60,10 @@ func (p *KubernetesProvider) Init(args []string) error {
 
 func (p *KubernetesProvider) GetName() string {
 	return "kubernetes"
+}
+
+func (p *KubernetesProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewDefaultProvider("kubernetes")
 }
 
 func (p *KubernetesProvider) InitService(serviceName string, verbose bool) error {

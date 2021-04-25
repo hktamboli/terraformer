@@ -20,8 +20,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
+	"github.com/hashicorp/terraform/addrs"
 	"google.golang.org/api/compute/v1"
+
+	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
 type GCPProvider struct { //nolint
@@ -81,6 +83,10 @@ func (p *GCPProvider) GetName() string {
 		return "google-" + p.providerType
 	}
 	return "google"
+}
+
+func (p *GCPProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewDefaultProvider("google")
 }
 
 func (p *GCPProvider) InitService(serviceName string, verbose bool) error {

@@ -2,6 +2,7 @@ package octopusdeploy
 
 import (
 	"errors"
+	"github.com/hashicorp/terraform/addrs"
 	"os"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
@@ -40,6 +41,10 @@ func (p *OctopusDeployProvider) Init(args []string) error {
 
 func (p *OctopusDeployProvider) GetName() string {
 	return "octopusdeploy"
+}
+
+func (p *OctopusDeployProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "OctopusDeployLabs", "octopusdeploy")
 }
 
 func (p *OctopusDeployProvider) GetProviderData(arg ...string) map[string]interface{} {

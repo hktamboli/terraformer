@@ -17,6 +17,8 @@ package cloudflare
 import (
 	"errors"
 
+	"github.com/hashicorp/terraform/addrs"
+
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils"
 )
 
@@ -30,6 +32,10 @@ func (p *CloudflareProvider) Init(args []string) error {
 
 func (p *CloudflareProvider) GetName() string {
 	return "cloudflare"
+}
+
+func (p *CloudflareProvider) GetProviderSource() addrs.Provider {
+	return addrs.NewProvider(addrs.DefaultRegistryHost, "cloudflare", "cloudflare")
 }
 
 func (p *CloudflareProvider) GetProviderData(arg ...string) map[string]interface{} {

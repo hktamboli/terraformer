@@ -16,52 +16,71 @@ package terraformutils
 
 import (
 	"bytes"
+	"github.com/hashicorp/terraform/addrs"
+	"github.com/hashicorp/terraform/providers"
+	"github.com/hashicorp/terraform/states"
+	"github.com/hashicorp/terraform/states/statefile"
 	"log"
 	"sync"
 
 	"github.com/GoogleCloudPlatform/terraformer/terraformutils/providerwrapper"
-
-	"github.com/hashicorp/terraform/terraform"
 )
 
 type BaseResource struct {
 	Tags map[string]string `json:"tags,omitempty"`
 }
 
-func NewTfState(resources []Resource) *terraform.State {
-	tfstate := &terraform.State{
-		Version:   terraform.StateVersion,
-		TFVersion: terraform.VersionString(), //nolint
-		Serial:    1,
-	}
-	outputs := map[string]*terraform.OutputState{}
-	for _, r := range resources {
-		for k, v := range r.Outputs {
-			outputs[k] = v
-		}
-	}
-	tfstate.Modules = []*terraform.ModuleState{
-		{
-			Path:      []string{"root"},
-			Resources: map[string]*terraform.ResourceState{},
-			Outputs:   outputs,
-		},
-	}
+func NewTfState(resources []Resource, providerSource addrs.Provider, resourceTypes map[string]providers.Schema) *states.State {
+	wrapper := states.NewState().SyncWrapper()
 	for _, resource := range resources {
-		resourceState := &terraform.ResourceState{
-			Type:     resource.InstanceInfo.Type,
-			Primary:  resource.InstanceState,
-			Provider: "provider." + resource.Provider,
+		instance := resource.Address.Instance(addrs.NoKey).Absolute(addrs.RootModuleInstance)
+		providerConfig := addrs.RootModuleInstance.ProviderConfigDefault(providerSource)
+		typeSchema := resourceTypes[resource.Address.Type]
+
+		// we need to use type stored in the instance state as we modify the attributes to make it writable to HCL
+		objectSrc, err := resource.InstanceState.Encode(resource.InstanceState.Value.Type(), uint64(typeSchema.Version))
+		if err != nil {
+			log.Println(err.Error())
+			continue
 		}
-		tfstate.Modules[0].Resources[resource.InstanceInfo.Type+"."+resource.ResourceName] = resourceState
+		wrapper.SetResourceInstanceCurrent(instance, objectSrc, providerConfig)
 	}
-	return tfstate
+	return wrapper.Lock()
+
+	//tfstate := &terraform.State{
+	//	Version:   terraform.StateVersion,
+	//	TFVersion: terraform.VersionString(), //nolint
+	//	Serial:    1,
+	//}
+	//outputs := map[string]*terraform.OutputState{}
+	//for _, r := range resources {
+	//	for k, v := range r.Outputs {
+	//		outputs[k] = v
+	//	}
+	//}
+	//tfstate.Modules = []*terraform.ModuleState{
+	//	{
+	//		Path:      []string{"root"},
+	//		Resources: map[string]*terraform.ResourceState{},
+	//		Outputs:   outputs,
+	//	},
+	//}
+	//for _, resource := range resources {
+	//	resourceState := &terraform.ResourceState{
+	//		Type:     resource.InstanceInfo.Type,
+	//		Primary:  resource.InstanceState,
+	//		Provider: "provider." + resource.Provider,
+	//	}
+	//	tfstate.Modules[0].Resources[resource.InstanceInfo.Type+"."+resource.ResourceName] = resourceState
+	//}
+	//return tfstate
 }
 
-func PrintTfState(resources []Resource) ([]byte, error) {
-	state := NewTfState(resources)
+func PrintTfState(resources []Resource, providerSource addrs.Provider, resourceTypes map[string]providers.Schema) ([]byte, error) {
+	state := NewTfState(resources, providerSource, resourceTypes)
 	var buf bytes.Buffer
-	err := terraform.WriteState(state, &buf)
+	file := statefile.New(state, "", 1)
+	err := statefile.Write(file, &buf)
 	return buf.Bytes(), err
 }
 
@@ -96,20 +115,20 @@ func RefreshResources(resources []*Resource, provider *providerwrapper.ProviderW
 
 	wg.Wait()
 	for _, r := range resources {
-		if r.InstanceState != nil && r.InstanceState.ID != "" {
+		if r.InstanceState != nil && r.ImportID != "" {
 			refreshedResources = append(refreshedResources, r)
 		} else {
-			log.Printf("ERROR: Unable to refresh resource %s", r.ResourceName)
+			log.Printf("ERROR: Unable to refresh resource %s", r.Address.String())
 		}
 	}
 
 	for _, resourceGroup := range slowProcessingResources {
 		for i := range resourceGroup {
 			r := resourceGroup[i]
-			if r.InstanceState != nil && r.InstanceState.ID != "" {
+			if r.InstanceState != nil && r.ImportID != "" {
 				refreshedResources = append(refreshedResources, r)
 			} else {
-				log.Printf("ERROR: Unable to refresh resource %s", r.ResourceName)
+				log.Printf("ERROR: Unable to refresh resource %s", r.Address.String())
 			}
 		}
 	}
@@ -149,7 +168,7 @@ func RefreshResourcesByProvider(providersMapping *ProvidersMapping, providerWrap
 
 func RefreshResourceWorker(input chan *Resource, wg *sync.WaitGroup, provider *providerwrapper.ProviderWrapper) {
 	for r := range input {
-		log.Println("Refreshing state...", r.InstanceInfo.Id)
+		log.Println("Refreshing state...", r.ImportID)
 		r.Refresh(provider)
 		wg.Done()
 	}
@@ -215,7 +234,7 @@ func FilterCleanup(s *Service, isInitial bool) {
 
 func ContainsResource(s []Resource, e Resource) bool {
 	for _, a := range s {
-		if a.InstanceInfo.Id == e.InstanceInfo.Id {
+		if a.ImportID == e.ImportID {
 			return true
 		}
 	}

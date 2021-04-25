@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/terraform/configs/hcl2shim"
 	"log"
 	"regexp"
 	"strings"
@@ -120,17 +121,17 @@ func (v *astSanitizer) visitObjectItem(o *ast.ObjectItem) {
 	v.visit(o.Val)
 }
 
-func Print(data interface{}, mapsObjects map[string]struct{}, format string) ([]byte, error) {
+func Print(data interface{}, mapsObjects map[string]struct{}, format string, isResourceFile bool) ([]byte, error) {
 	switch format {
 	case "hcl":
-		return hclPrint(data, mapsObjects)
+		return hclPrint(data, mapsObjects, isResourceFile)
 	case "json":
 		return jsonPrint(data)
 	}
 	return []byte{}, errors.New("error: unknown output format")
 }
 
-func hclPrint(data interface{}, mapsObjects map[string]struct{}) ([]byte, error) {
+func hclPrint(data interface{}, mapsObjects map[string]struct{}, isResourceFile bool) ([]byte, error) {
 	dataBytesJSON, err := jsonPrint(data)
 	if err != nil {
 		return dataBytesJSON, err
@@ -162,17 +163,13 @@ func hclPrint(data interface{}, mapsObjects map[string]struct{}) ([]byte, error)
 	if err != nil {
 		return nil, err
 	}
-	// hack for support terraform 0.12
-	formatted = terraform12Adjustments(formatted, mapsObjects)
-	// hack for support terraform 0.13
-	formatted = terraform13Adjustments(formatted)
-	if err != nil {
-		log.Println("Invalid HCL follows:")
-		for i, line := range strings.Split(s, "\n") {
-			fmt.Printf("%4d|\t%s\n", i+1, line)
-		}
-		return nil, fmt.Errorf("error formatting HCL: %v", err)
+	if isResourceFile {
+		// hack for support terraform 0.12
+		formatted = terraform12Adjustments(formatted, mapsObjects)
 	}
+	// hack for support terraform 0.15
+	formatted = terraform15Adjustments1(formatted)
+	formatted = terraform15Adjustments2(formatted)
 
 	return formatted, nil
 }
@@ -205,21 +202,35 @@ func terraform12Adjustments(formatted []byte, mapsObjects map[string]struct{}) [
 	return []byte(s)
 }
 
-func terraform13Adjustments(formatted []byte) []byte {
+func terraform15Adjustments1(formatted []byte) []byte {
 	s := string(formatted)
-	oldRequiredProviders := "\"required_providers\""
-	newRequiredProviders := "required_providers"
+	oldTerraformConfiguration := "terraform = {"
+	oldRequiredProviders := "  required_providers = {"
+	newTerraformConfiguration := "terraform {"
+	newRequiredProviders := "  required_providers {"
 	lines := strings.Split(s, "\n")
-	providerRequirementDefinition := false
 	for i, line := range lines {
-		if providerRequirementDefinition {
-			line = strings.ReplaceAll(line, " {", " = {")
+		if line == oldTerraformConfiguration {
+			lines[i] = newTerraformConfiguration
 		}
-		providerRequirementDefinition = strings.Contains(line, newRequiredProviders)
-		lines[i] = strings.Replace(line, oldRequiredProviders, newRequiredProviders, 1)
+		if line == oldRequiredProviders {
+			lines[i] = newRequiredProviders
+		}
 	}
 	s = strings.Join(lines, "\n")
 	return []byte(s)
+}
+
+func terraform15Adjustments2(formatted []byte) []byte {
+	s := string(formatted)
+	lines := strings.Split(s, "\n")
+	var newLines []string
+	for _, line := range lines {
+		if !strings.Contains(line, "= {}") && !strings.Contains(line, "= []") {
+			newLines = append(newLines, line)
+		}
+	}
+	return []byte(strings.Join(newLines, "\n"))
 }
 
 func escapeRune(s string) string {
@@ -239,21 +250,38 @@ func HclPrintResource(resources []Resource, providerData map[string]interface{},
 	mapsObjects := map[string]struct{}{}
 	indexRe := regexp.MustCompile(`\.[0-9]+`)
 	for _, res := range resources {
-		r := resourcesByType[res.InstanceInfo.Type]
+		r := resourcesByType[res.Address.Type]
 		if r == nil {
 			r = make(map[string]interface{})
-			resourcesByType[res.InstanceInfo.Type] = r
+			resourcesByType[res.Address.Type] = r
 		}
 
-		if r[res.ResourceName] != nil {
+		if r[res.Address.Name] != nil {
 			log.Println(resources)
-			log.Printf("[ERR]: duplicate resource found: %s.%s", res.InstanceInfo.Type, res.ResourceName)
+			log.Printf("[ERR]: duplicate resource found: %s", res.Address.String())
 			continue
 		}
 
-		r[res.ResourceName] = res.Item
+		var ignoreKeys []*regexp.Regexp
+		for _, pattern := range res.IgnoreKeys {
+			ignoreKeys = append(ignoreKeys, regexp.MustCompile(pattern))
+		}
+		var allowEmptyValues []*regexp.Regexp
+		for _, pattern := range res.AllowEmptyValues {
+			if pattern != "" {
+				allowEmptyValues = append(allowEmptyValues, regexp.MustCompile(pattern))
+			}
+		}
 
-		for k := range res.InstanceState.Attributes {
+		flattenedAttributes := hcl2shim.FlatmapValueFromHCL2(res.InstanceState.Value)
+		parser := NewFlatmapParser(flattenedAttributes, ignoreKeys, allowEmptyValues)
+		parsedAttributes, err := parser.Parse(res.InstanceState.Value.Type())
+		if err != nil {
+			return []byte{}, err
+		}
+		r[res.Address.Name] = parsedAttributes
+
+		for k := range res.InstanceState.Value.AsValueMap() {
 			if strings.HasSuffix(k, ".%") {
 				key := strings.TrimSuffix(k, ".%")
 				mapsObjects[indexRe.ReplaceAllString(key, "")] = struct{}{}
@@ -270,7 +298,7 @@ func HclPrintResource(resources []Resource, providerData map[string]interface{},
 	}
 	var err error
 
-	hclBytes, err := Print(data, mapsObjects, output)
+	hclBytes, err := Print(data, mapsObjects, output, true)
 	if err != nil {
 		return []byte{}, err
 	}
