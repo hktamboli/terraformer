@@ -203,6 +203,9 @@ require (
 	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
+	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/IBM/go-sdk-core/v5 v5.5.1 // indirect
+	github.com/Jeffail/gabs v1.4.0
 	github.com/BurntSushi/toml v1.1.0 // indirect
 	github.com/IBM/go-sdk-core/v5 v5.10.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
