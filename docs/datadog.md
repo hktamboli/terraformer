@@ -105,6 +105,8 @@ Tag filters are order specific. For example, if your monitor has tags (in the or
     * `datadog_logs_index`
 *   `logs_index_order`
     * `datadog_logs_index_order`
+*   `powerpack`
+    * `datadog_powerpack`
 *   `integration_aws`
     * `datadog_integration_aws`
 *   `integration_aws_lambda_arn`
